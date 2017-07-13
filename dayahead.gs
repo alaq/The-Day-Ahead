@@ -19,6 +19,9 @@ var headlinesPerSource = 5;                    // Number of headlines per news s
 var emailTitle = "The Day Ahead";          // What to title the email
 var daysAhead = 2;                        // Number of days out to scan events
 
+var foursquareUrl = 'https://feeds.foursquare.com/history/XXXXXXXXXXXXX.kml'; // Replace with your own link
+var darkSkyAPI = 'XXXXXXXXX'; // Replace with your own key
+
 
 // DO NOT MODIFY BELOW
 
@@ -275,15 +278,14 @@ function retrieveFeedItems(feedUrl) {
 }
 
 function getWeather(){
-  var url = 'https://api.darksky.net/forecast/240b50740f1e67b00d7486a93c8df404/' + getLastPosition();
+  var url = 'https://api.darksky.net/forecast/' + darkSkyAPI + '/' + getLastPosition();
   var response = UrlFetchApp.fetch(url, {'muteHttpExceptions': true});
   var json = JSON.parse(response);
   return json;
 }
 
 function getLastPosition(){
-  var url = 'https://feeds.foursquare.com/history/PVIWVMZG2T3IZQNXCKQL1DW3US5VV2M5.kml';
-  var response = UrlFetchApp.fetch(url).getContentText();
+  var response = UrlFetchApp.fetch(foursquareUrl).getContentText();
   var document = XmlService.parse(response);
   var coordinates = document.getRootElement().getChild('Folder').getChild('Placemark').getChild('Point').getChildText('coordinates');
   coordinates = coordinates.split(',');
