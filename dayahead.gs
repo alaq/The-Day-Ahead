@@ -8,7 +8,7 @@ var dataSources = [
   
 // keyword triggers
 var keyWords = [
-  "macron", "syria"
+  "macron", "syria", "trump"
 ];
 
 // subreddits
@@ -18,11 +18,10 @@ var subreddits = ['plex', 'plexacd', 'datahoarder', 'seedboxes', 'radarr', 'sona
 var headlinesPerSource = 5;                    // Number of headlines per news source
 var emailTitle = "The Day Ahead";          // What to title the email
 var daysAhead = 2;                        // Number of days out to scan events
+var fontSize = 22;
 
 var foursquareUrl = 'https://feeds.foursquare.com/history/XXXXXXXXXXXXX.kml'; // Replace with your own link
 var darkSkyAPI = 'XXXXXXXXX'; // Replace with your own key
-
-
 // DO NOT MODIFY BELOW
 
 // List to hold headlines that contain keywords
@@ -37,7 +36,7 @@ function deliverNews()
 {
   var newsMsg = ""; // will hold the completed HTML to email
   var deliverAddress = Session.getActiveUser().getEmail();
-  var calEventsStr = "<h2>Calendar</h2>";
+  var calEventsStr = "<h2>📅 Calendar</h2>";
   
   var calendars = CalendarApp.getAllCalendars();
   var calEvents = [];
@@ -53,18 +52,20 @@ function deliverNews()
     }
   }
   
+  
+  
   var calendarTexts = buildEventsHTML(calEvents);
   
 //  if (calEvents.length > 0) {
   if (numberOfEvents > 0) {
-    calEventsStr += "<p>You have " + numberOfEvents + " events today</p>";
+    calEventsStr += "<p>You have " + numberOfEvents + " events coming up</p>";
     calEventsStr += calendarTexts[0];
   }
   else {
     calEventsStr += "<p>No events today</p>";
   }
   
-  calEventsStr += "<h2>Birthdays</h2>";
+  calEventsStr += "<h2>🎁 Birthdays</h2>";
   
   if (numberOfBirthdays > 0) {
     calEventsStr += "<p>You have " + numberOfBirthdays + " upcoming birthdays</p>";
@@ -82,18 +83,18 @@ function deliverNews()
   }
   
   // Generate the Top Stories list that was created based on keywords
-  var topStoriesStr = "<h2>Top Stories</h2>";
+  var topStoriesStr = "<h2>🔝 Top Stories</h2>";
   if (topStories.length > 0) {
     topStoriesStr += "<ul>";
     for (var k=0; k<topStories.length; k++) {
-      topStoriesStr += "<li style='font-weight:bold'><a href='" + topStories[k].link + "'>" + 
-        topStories[k].title + "</a></li>\n";
+      topStoriesStr += '<li style="font-weight:bold"><span style="font-size: ' + fontSize + 'px"><a href="' + topStories[k].link + '">' + 
+        topStories[k].title + '</a></span></li>\n';
     }
     topStoriesStr += "</ul>";
   }
   
-  var currentEvents = "<h2>Current Events</h2>";
-  currentEvents += getWikipediaCurrentEvents();
+//  var currentEvents = "<h2>📰 Current Events</h2>";
+//  currentEvents += getWikipediaCurrentEvents();
   
   var weatherString = "<h2>Weather</h2>";
   var weatherObject = getWeather();
@@ -103,13 +104,14 @@ function deliverNews()
   weatherString += 'Today: ' + weatherObject.hourly.summary + '<br />' + 'This week: ' + weatherObject.daily.summary;
   
   
-  var redditString = "<h2>Reddit</h2>";
+  var redditString = "<h2>👽 Reddit</h2>";
   for (var i = 0 ; i < subreddits.length ; i++){
     redditString += scrapeReddit(subreddits[i]);
   }
 
   // put all the data together
-  newsMsg = "<h1>" + emailTitle + "</h1>\n" + calEventsStr + weatherString + currentEvents  + topStoriesStr + feedStoriesStr + redditString;
+//  newsMsg = "<h1>" + emailTitle + "</h1>\n" + calEventsStr + weatherString + currentEvents  + topStoriesStr + feedStoriesStr + redditString;
+  newsMsg = "<h1>" + emailTitle + "</h1>\n" + calEventsStr + weatherString + topStoriesStr + feedStoriesStr + redditString;
   
   // Deliver the email message as HTML to the recipient
   GmailApp.sendEmail(deliverAddress, emailTitle + ': ' + formattedDate, "", { htmlBody: newsMsg });
@@ -148,14 +150,16 @@ function buildEventsHTML(calEvents) {
   for (var i=0; i < calEvents.length; i++) {
     if (CalendarApp.getCalendarById(calEvents[i].getOriginalCalendarId()).getName().toLowerCase().indexOf('birthdays') === -1 && CalendarApp.getCalendarById(calEvents[i].getOriginalCalendarId()).getName().toLowerCase().indexOf('contacts') === -1){
       str += "<strong>" + 
-      calEvents[i].getTitle() + "</strong> <small> " + calEvents[i].getStartTime() + "@ " + calEvents[i].getLocation() + " </small>";
+      calEvents[i].getTitle() + "</strong> <small> " + calEvents[i].getStartTime() + " @ " + calEvents[i].getLocation() + " </small>";
       if (calEvents[i].getDescription()) {
         str += "<br />" + calEvents[i].getDescription().slice(0,210) + "<br /><br />"
-      }
+      } else { str += "<br /><br />" };
       numberOfEvents++;
     } else {
-      birthdaysStr += "<li>" + 
-        calEvents[i].getTitle() + " <small>" + Utilities.formatDate(new Date(calEvents[i].getAllDayStartDate()), 'GMT', 'EEEE MMMM dd yyyy') + "</small></li>";
+      var todayDate = Utilities.formatDate(new Date(), 'GMT', 'EEEE MMMM dd yyyy');
+      var birthdayDate = Utilities.formatDate(new Date(calEvents[i].getAllDayStartDate()), 'GMT', 'EEEE MMMM dd yyyy');
+      if (todayDate === birthdayDate) birthdaysStr += "<li><strong>" + calEvents[i].getTitle() + "</strong> <small>" + Utilities.formatDate(new Date(calEvents[i].getAllDayStartDate()), 'GMT', 'EEEE MMMM dd yyyy') + "</small></li>";
+      else birthdaysStr += "<li>" + calEvents[i].getTitle() + " <small>" + Utilities.formatDate(new Date(calEvents[i].getAllDayStartDate()), 'GMT', 'EEEE MMMM dd yyyy') + "</small></li>";
       numberOfBirthdays++;
     }
 }
@@ -267,7 +271,8 @@ function retrieveFeedItems(feedUrl) {
       }
       // If we didn't add this item to the topStories, add it to the main news
       if (!keywordFound) {
-        str += "<li><a href='" + strLink + "'>" + strTitle + "</a></li>\n";
+        str += '<li><span style="font-size: ' + fontSize + 'px"><a href="' + strLink + '">' + strTitle + '</a></span></li>\n';
+//        str += '<p><span style="font-size: ' + fontSize + 'px"><a href="' + data[j].link + '">' + data[j].title + '</a></span><small>' + ' ' + Utilities.formatDate(new Date(data[j].date), "UTC", "MMMM dd HH:mm") + '</small></p>'
       }
       Logger.log(strTitle);
     }
@@ -297,7 +302,7 @@ function scrapeReddit(sub) {
   
 // userProperties.setProperty(sub, ''); // un-comment if you want to display all reddit posts, regarless of wether they have been sent before
   
-  var redditUrl = 'https://www.reddit.com/r/' + sub + '/new.xml?limit=100&before=' + userProperties.getProperty(sub);
+  var redditUrl = 'https://www.reddit.com/r/' + sub + '/new.xml?limit=50&before=' + userProperties.getProperty(sub);
   Logger.log(redditUrl);
   
   
@@ -330,10 +335,9 @@ function scrapeReddit(sub) {
   }
   
   // Now let's format that data as a string
-  
   var str = '<h3>r/' + sub + '</h3>';
   for (var j = 0 ; j < data.length ; j++){
-    str +=  '<a href="' + data[j].link + '">' + data[j].title + '</a><small>' + ' ' + Utilities.formatDate(new Date(data[j].date), "UTC", "MMMM dd HH:mm") + '</small><br />';
+    str +=  '<p><span style="font-size: ' + fontSize + 'px"><a href="' + data[j].link + '">' + data[j].title + '</a></span><small>' + ' ' + Utilities.formatDate(new Date(data[j].date), "UTC", "MMMM dd HH:mm") + '</small></p>';
   }
   
   if (!data[0]) str += 'No new posts in this subreddit.'
